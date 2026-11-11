@@ -1,14 +1,23 @@
 import { strFromU8, unzipSync } from 'fflate';
 import { describe, expect, it } from 'vitest';
-import { archiveName, buildArchive } from './zip-export';
+import { archiveName, buildArchive, downloadName } from './zip-export';
 
-describe('archiveName', () => {
-  it('makes a safe file name from a title', () => {
-    expect(archiveName('Thesis – Chapter 4')).toBe('Thesis-Chapter-4.zip');
-    expect(archiveName('  Café déjà vu  ')).toBe('Cafe-deja-vu.zip');
-    expect(archiveName('a/b\\c:d*e?')).toBe('a-b-c-d-e.zip');
-    expect(archiveName('…')).toBe('scroll.zip');
-    expect(archiveName('x'.repeat(200)).length).toBe(84);
+describe('downloadName', () => {
+  it('keeps the scroll name as it is written, and only drops what a file name cannot hold', () => {
+    expect(downloadName('Trabajo_Asincrónico_V', 'pdf')).toBe('Trabajo_Asincrónico_V.pdf');
+    expect(downloadName('Thesis – Chapter 4', 'zip')).toBe('Thesis – Chapter 4.zip');
+    expect(downloadName('  Café   déjà vu  ', 'pdf')).toBe('Café déjà vu.pdf');
+    expect(downloadName('a/b\\c:d*e?"f<g>h|i', 'pdf')).toBe('a b c d e f g h i.pdf');
+  });
+  it('never makes a hidden or Windows-hostile name, and always has something', () => {
+    expect(downloadName('.hidden', 'pdf')).toBe('hidden.pdf');
+    expect(downloadName('ends with dots...', 'pdf')).toBe('ends with dots.pdf');
+    expect(downloadName('', 'pdf')).toBe('scroll.pdf');
+    expect(downloadName(null, 'zip')).toBe('scroll.zip');
+    expect(downloadName('x'.repeat(200), 'pdf').length).toBe(124);
+  });
+  it('names the archive after the scroll', () => {
+    expect(archiveName('Mi Tesis')).toBe('Mi Tesis.zip');
   });
 });
 

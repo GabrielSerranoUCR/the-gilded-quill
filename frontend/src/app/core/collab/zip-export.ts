@@ -1,17 +1,22 @@
 import { type Zippable, strToU8, zipSync } from 'fflate';
 
-/** A file name for the archive from the scroll's title: "Thesis – Chapter 4" becomes "Thesis-Chapter-4.zip". */
-export function archiveName(title: string): string {
-  const base = title
-    .normalize('NFKD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/[^A-Za-z0-9._ -]+/g, ' ')
+/**
+ * A download's file name from the scroll's title, as the scroll is called: spaces, accents and capitals stay,
+ * only what no file name may hold (\ / : * ? " < > | and control characters) goes.
+ * "Trabajo_Asincrónico_V" gives "Trabajo_Asincrónico_V.pdf".
+ */
+export function downloadName(title: string | null | undefined, ext: string): string {
+  const base = (title ?? '')
+    .replace(/[\u0000-\u001f\\/:*?"<>|]+/g, ' ')
+    .replace(/\s+/g, ' ')
     .trim()
-    .replace(/[\s-]+/g, '-')
-    .replace(/^[-.]+|[-.]+$/g, '')
-    .slice(0, 80);
-  return `${base || 'scroll'}.zip`;
+    .slice(0, 120)
+    .replace(/^\.+|[. ]+$/g, ''); // no leading dots (hidden file), no trailing dots or spaces (Windows drops them)
+  return `${base || 'scroll'}.${ext}`;
 }
+
+/** The archive of a scroll: its title plus ".zip". */
+export const archiveName = (title: string): string => downloadName(title, 'zip');
 
 /**
  * Every file of a scroll as a .zip, folders and all: text files as written, pictures and PDFs as bytes, and

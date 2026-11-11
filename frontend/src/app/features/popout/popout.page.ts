@@ -5,6 +5,7 @@ import { ScrollsService } from '../../core/api/scrolls.service';
 import { CollabService } from '../../core/collab/collab.service';
 import { PreferencesService } from '../../core/prefs/prefs.service';
 import { PopPanel, PopoutMessage, channelName, parseMessage } from '../../core/layout/popout-protocol';
+import { downloadName } from '../../core/collab/zip-export';
 import { PdfPoint } from '../editor/ui/pdf-preview.component';
 import { columnIn } from '../../core/pdf/word';
 import { InkLogComponent } from '../editor/ui/ink-log.component';
@@ -21,12 +22,12 @@ import { PdfPreviewComponent } from '../editor/ui/pdf-preview.component';
     <div class="win">
       <header class="bar">
         <h1>The Gilded Quill — {{ title() }}@if (scrollTitle()) { · {{ scrollTitle() }} }</h1>
-        @if (panel() === 'preview' && compile.pdfUrl(); as pdf) { <a class="btn btn--ghost" [href]="pdf" download="scroll.pdf">⤓ Download</a> }
+        @if (panel() === 'preview' && compile.pdfUrl(); as pdf) { <a class="btn btn--ghost" [href]="pdf" [attr.download]="pdfName()">⤓ Download</a> }
         <button type="button" class="btn btn--ghost" (click)="dockBack()">Dock back</button>
       </header>
       <main class="stage">
         @if (panel() === 'preview') {
-          <qq-pdf-preview [controls]="false" [pdfUrl]="compile.pdfUrl()" [state]="compile.state()" [stale]="compile.stale()" (locate)="locateInMain($event)" />
+          <qq-pdf-preview [controls]="false" [scrollTitle]="scrollTitle()" [pdfUrl]="compile.pdfUrl()" [state]="compile.state()" [stale]="compile.stale()" (locate)="locateInMain($event)" />
         } @else {
           <qq-ink-log [controls]="false" [showWarnings]="prefs.prefs().showWarnings" [state]="compile.state()" [result]="compile.result()" [fatalError]="compile.fatalError()" (jump)="jumpInMain($event)" />
         }
@@ -58,6 +59,7 @@ export class PopoutPage {
   private readonly router = inject(Router);
 
   protected readonly scrollTitle = signal('');
+  protected readonly pdfName = computed(() => downloadName(this.scrollTitle(), 'pdf'));
   protected readonly linked = signal(false);
   private channel: BroadcastChannel | null = null;
   private readonly which = computed<PopPanel>(() => (this.panel() === 'log' ? 'log' : 'preview'));
