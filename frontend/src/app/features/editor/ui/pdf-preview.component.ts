@@ -1,4 +1,5 @@
-import { Component, ElementRef, OnDestroy, effect, input, output, signal, untracked, viewChild } from '@angular/core';
+import { downloadName } from '../../../core/collab/zip-export';
+import { Component, ElementRef, OnDestroy, computed, effect, input, output, signal, untracked, viewChild } from '@angular/core';
 import { CompileState } from '../../../core/api/compile.service';
 import { pageScale, pointOnPage, restoredScrollTop } from '../../../core/pdf/geometry';
 
@@ -41,7 +42,7 @@ interface Slot { el: HTMLElement; canvas: HTMLCanvasElement; text: HTMLElement |
         <button type="button" class="hbtn" title="Zoom in" aria-label="Zoom in" (click)="zoomBy(0.15)">+</button>
       }
       @if (controls()) {
-        @if (pdfUrl()) { <a class="hbtn" [href]="pdfUrl()" download="scroll.pdf" title="Download the PDF" aria-label="Download the PDF">⤓</a> }
+        @if (pdfUrl()) { <a class="hbtn" [href]="pdfUrl()" [attr.download]="fileName()" title="Download the PDF" aria-label="Download the PDF">⤓</a> }
         <button type="button" class="hbtn" title="Pop out to a new window" aria-label="Pop Scroll Preview out to a new window" (click)="popOut.emit()">⧉</button>
         <button type="button" class="hbtn" title="Hide this panel" aria-label="Hide Scroll Preview" (click)="hide.emit()">−</button>
       }
@@ -54,7 +55,7 @@ interface Slot { el: HTMLElement; canvas: HTMLCanvasElement; text: HTMLElement |
           <p>Press <kbd>Compile</kbd> (or <kbd>⌘/Ctrl</kbd>+<kbd>Enter</kbd>) to ink your scroll.</p>
         </div>
       } @else if (failed()) {
-        <div class="empty overlay"><p class="title">The preview could not be drawn</p><p>You can still <a [href]="pdfUrl()" download="scroll.pdf">download the PDF</a>.</p></div>
+        <div class="empty overlay"><p class="title">The preview could not be drawn</p><p>You can still <a [href]="pdfUrl()" [attr.download]="fileName()">download the PDF</a>.</p></div>
       }
       @if (stale()) { <span class="chip chip--bad badge">Last good build</span> }
       @if (state() === 'compiling') {
@@ -70,6 +71,9 @@ export class PdfPreviewComponent implements OnDestroy {
   readonly stale = input(false);
   /** Pop-out and hide buttons (off inside the popped-out window itself). */
   readonly controls = input(true);
+  /** The scroll's title: the downloaded PDF is called after it. */
+  readonly scrollTitle = input<string | null>(null);
+  protected readonly fileName = computed(() => downloadName(this.scrollTitle(), 'pdf'));
   readonly popOut = output<void>();
   readonly hide = output<void>();
   /** The reader double-clicked this spot of the PDF. */
