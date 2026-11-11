@@ -32,6 +32,9 @@ export class DashboardPage {
   protected readonly filter = signal<'all' | 'mine' | 'shared'>('all');
 
   private readonly newDialog = viewChild.required<ElementRef<HTMLDialogElement>>('newDialog');
+  protected readonly renameValue = signal('');
+  private renaming: ScrollSummary | null = null;
+  private readonly renameDialog = viewChild.required<ElementRef<HTMLDialogElement>>('renameDialog');
   private readonly deleteDialog = viewChild.required<ElementRef<HTMLDialogElement>>('deleteDialog');
 
   protected readonly visible = computed(() => {
@@ -108,6 +111,31 @@ export class DashboardPage {
       await this.router.navigate(['/scroll', scroll.id, 'hall']);
     } catch (e) {
       this.error.set(apiMessage(e));
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  protected askRename(scroll: ScrollSummary): void {
+    this.renaming = scroll;
+    this.renameValue.set(scroll.title);
+    this.dialogError.set(null);
+    this.renameDialog().nativeElement.showModal();
+  }
+
+  protected async saveRename(event: Event): Promise<void> {
+    event.preventDefault();
+    const scroll = this.renaming;
+    const title = this.renameValue().trim();
+    if (!scroll || !title || this.busy()) return;
+    this.busy.set(true);
+    this.dialogError.set(null);
+    try {
+      await this.api.rename(scroll.id, title);
+      this.scrolls.update((l) => (l ?? []).map((s) => (s.id === scroll.id ? { ...s, title } : s)));
+      this.renameDialog().nativeElement.close();
+    } catch (e) {
+      this.dialogError.set(apiMessage(e));
     } finally {
       this.busy.set(false);
     }

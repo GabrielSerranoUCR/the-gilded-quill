@@ -2,7 +2,7 @@
   <header class="beam">
     <a class="back" routerLink="/" aria-label="Back to the quest board" title="Back to the quest board">←</a>
     <div class="doc">
-      <h1>{{ scroll()?.title ?? '…' }}@if (role(); as r) { <span class="chip" [class.chip--ok]="r === 'owner'" [class.chip--idle]="r !== 'owner'">{{ r }}</span> }</h1>
+      <h1><span class="ttl" [title]="role() === 'owner' ? 'Double-click to rename' : (scroll()?.title ?? '')" (dblclick)="role() === 'owner' && openRename()">{{ scroll()?.title ?? '…' }}</span>@if (role() === 'owner') { <button class="edit" type="button" (click)="openRename()" aria-label="Rename scroll" title="Rename scroll">✎</button> }@if (role(); as r) { <span class="chip" [class.chip--ok]="r === 'owner'" [class.chip--idle]="r !== 'owner'">{{ r }}</span> }</h1>
       <p class="state" [class.off]="offline()">
         @switch (collab.status()) {
           @case ('connected') { <span class="dot ok"></span> {{ collab.synced() ? 'Saved to the cellar · all scribes in sync' : 'Joining the table…' }} }
