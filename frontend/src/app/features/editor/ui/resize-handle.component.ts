@@ -1,4 +1,4 @@
-import { Component, computed, input, output, signal } from '@angular/core';
+import { Component, OnDestroy, computed, input, output, signal } from '@angular/core';
 import { stepSize } from '../../../core/layout/panel-layout';
 
 /**
@@ -50,7 +50,7 @@ import { stepSize } from '../../../core/layout/panel-layout';
     :host(.row-handle) .tip { left: 50%; top: -34px; transform: translateX(-50%); }
   `,
 })
-export class ResizeHandleComponent {
+export class ResizeHandleComponent implements OnDestroy {
   readonly orientation = input<'col' | 'row'>('col');
   readonly value = input.required<number>();
   readonly min = input.required<number>();
@@ -65,6 +65,8 @@ export class ResizeHandleComponent {
   protected readonly focused = signal(false);
   protected readonly hovered = signal(false);
   private start: { id: number; from: number; at: number } | null = null;
+  private frame = 0;
+  private pending: number | null = null;
 
   protected readonly range = computed(() => [this.min(), this.max()] as const);
 
@@ -74,19 +76,41 @@ export class ResizeHandleComponent {
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     this.start = { id: e.pointerId, from: this.orientation() === 'col' ? e.clientX : e.clientY, at: this.value() };
     this.dragging.set(true);
+    // while dragging, nothing under the pointer may be selected or change the cursor (it made the drag stutter)
+    document.documentElement.classList.add('qq-resizing');
   }
 
   protected move(e: PointerEvent): void {
     const s = this.start;
     if (!s || s.id !== e.pointerId) return;
     const now = this.orientation() === 'col' ? e.clientX : e.clientY;
-    this.resize.emit(Math.round(s.at + (now - s.from) * this.sign()));
+    // pointer events can come faster than the screen repaints (high-polling mice on Windows): apply only the latest, once per frame
+    this.pending = Math.round(s.at + (now - s.from) * this.sign());
+    if (!this.frame) {
+      this.frame = requestAnimationFrame(() => {
+        this.frame = 0;
+        const v = this.pending;
+        this.pending = null;
+        if (v !== null && this.start) this.resize.emit(v);
+      });
+    }
+  }
+
+  ngOnDestroy(): void {
+    cancelAnimationFrame(this.frame);
+    document.documentElement.classList.remove('qq-resizing');
   }
 
   protected up(e: PointerEvent): void {
     if (!this.start || this.start.id !== e.pointerId) return;
+    const last = this.pending;
     this.start = null;
+    this.pending = null;
+    cancelAnimationFrame(this.frame);
+    this.frame = 0;
+    if (last !== null) this.resize.emit(last);
     this.dragging.set(false);
+    document.documentElement.classList.remove('qq-resizing');
     (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
   }
 
