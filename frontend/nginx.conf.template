@@ -16,7 +16,7 @@ server {
     add_header X-Frame-Options "SAMEORIGIN" always; # the PDF preview is a same-origin frame
 
     # the API (compiling can take a minute)
-    location /api/ {
+    location ^~ /api/ {
         set $backend "${BACKEND_URL}";
         proxy_pass $backend;
         proxy_set_header Host $host;
@@ -27,7 +27,7 @@ server {
     }
 
     # live editing (a WebSocket per open scroll)
-    location /ws/ {
+    location ^~ /ws/ {
         set $backend "${BACKEND_URL}";
         proxy_pass $backend;
         proxy_http_version 1.1;

@@ -55,13 +55,14 @@
         @for (s of visible(); track s.id) {
           <li class="card parchment">
             <a class="open" [routerLink]="['/scroll', s.id]" [attr.aria-label]="'Open ' + s.title">
-              <h2>{{ s.title }}</h2>
+              <h2 class="ttl" [title]="s.title">{{ s.title }}</h2>
               <p class="meta">Edited {{ ago(s.updatedAt) }} · {{ s.memberCount }} {{ s.memberCount === 1 ? 'scribe' : 'scribes' }}</p>
               <p class="meta">By {{ s.ownerName }}</p>
             </a>
             <div class="foot">
               <span class="chip" [class.chip--ok]="s.role === 'owner'" [class.chip--idle]="s.role !== 'owner'">{{ s.role }}</span>
               @if (s.role === 'owner') {
+                <button class="link" type="button" (click)="askRename(s)" [attr.aria-label]="'Rename ' + s.title">Rename</button>
                 <button class="link danger" type="button" (click)="askDelete(s)" [attr.aria-label]="'Delete ' + s.title">Delete</button>
               }
             </div>
@@ -84,6 +85,21 @@
     <div class="actions">
       <button class="btn btn--ink" type="button" (click)="newDialog.close()">Cancel</button>
       <button class="btn" type="submit" [disabled]="busy() || !newTitle().trim()">{{ busy() ? 'Creating…' : 'Create scroll' }}</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog class="modal" #renameDialog aria-labelledby="renH">
+  <form class="parchment" (submit)="saveRename($event)">
+    <h2 id="renH">Rename scroll</h2>
+    <label class="field">
+      <span>Name</span>
+      <input name="title" [(ngModel)]="renameValue" maxlength="120" autocomplete="off" required />
+    </label>
+    @if (dialogError(); as e) { <p class="alert" role="alert">{{ e }}</p> }
+    <div class="actions">
+      <button class="btn btn--ink" type="button" (click)="renameDialog.close()">Cancel</button>
+      <button class="btn" type="submit" [disabled]="busy() || !renameValue().trim()">Rename</button>
     </div>
   </form>
 </dialog>
