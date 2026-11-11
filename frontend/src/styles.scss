@@ -331,3 +331,7 @@ dialog.modal {
 // In the Dwarves' Caves the tables and stools are cut from stone, not oak.
 :root[data-theme='caves'] .table > img, :root[data-theme='caves'] .member .stool { filter: grayscale(1) brightness(0.95) contrast(1.15); }
 :root[data-theme='caves'] .table.drop .rug { filter: grayscale(1) brightness(1.7) contrast(1.1); }
+
+/* while a panel handle is being dragged: no text selection, one cursor, no hover effects underneath */
+html.qq-resizing, html.qq-resizing * { user-select: none !important; }
+html.qq-resizing iframe, html.qq-resizing canvas { pointer-events: none; }

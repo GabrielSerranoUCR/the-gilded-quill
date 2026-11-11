@@ -1,6 +1,14 @@
 import { TestBed } from '@angular/core/testing';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ResizeHandleComponent } from './resize-handle.component';
+
+// frames are driven by hand: the handle applies at most one resize per frame
+let frames: FrameRequestCallback[] = [];
+const flush = () => {
+  const run = frames;
+  frames = [];
+  run.forEach((f) => f(0));
+};
 
 function setup(over: { orientation?: 'col' | 'row'; sign?: 1 | -1; value?: number } = {}) {
   const fixture = TestBed.createComponent(ResizeHandleComponent);
@@ -29,6 +37,13 @@ function setup(over: { orientation?: 'col' | 'row'; sign?: 1 | -1; value?: numbe
 }
 
 describe('ResizeHandleComponent', () => {
+  beforeEach(() => {
+    frames = [];
+    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => frames.push(cb));
+    vi.stubGlobal('cancelAnimationFrame', () => undefined);
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
   it('is an accessible separator with its value and limits', () => {
     const { grip } = setup();
     expect(grip.getAttribute('role')).toBe('separator');
@@ -43,13 +58,30 @@ describe('ResizeHandleComponent', () => {
     const before = setup({ sign: 1 });
     before.pointer('pointerdown', 100, 0);
     before.pointer('pointermove', 140, 0);
+    flush();
     before.pointer('pointermove', 90, 0);
+    flush();
     expect(before.sizes).toEqual([340, 290]);
 
     const after = setup({ sign: -1 });
     after.pointer('pointerdown', 500, 0);
     after.pointer('pointermove', 460, 0);
+    flush();
     expect(after.sizes).toEqual([340]);
+  });
+
+  it('applies only the latest of many moves within one frame, and the last one on release', () => {
+    const { pointer, sizes } = setup();
+    pointer('pointerdown', 100, 0);
+    for (const x of [110, 120, 130, 140]) pointer('pointermove', x, 0);
+    expect(sizes).toEqual([]);
+    flush();
+    expect(sizes).toEqual([340]);
+    pointer('pointermove', 150, 0);
+    pointer('pointerup', 150, 0); // released before the frame came: nothing is lost
+    expect(sizes).toEqual([340, 350]);
+    flush();
+    expect(sizes).toEqual([340, 350]);
   });
 
   it('measures a row handle on the vertical axis and ignores other pointers and moves after release', () => {

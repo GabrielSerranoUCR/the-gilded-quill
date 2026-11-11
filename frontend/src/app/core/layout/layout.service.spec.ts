@@ -108,4 +108,23 @@ describe('PanelLayoutService', () => {
     expect(l.save()).toBe(false);
     expect(l.hasSaved()).toBe(false);
   });
+
+  it('keeps every change on its own, so a reload brings the same layout back', () => {
+    const a = fresh();
+    a.setVisible('preview', false);
+    TestBed.tick();
+    const b = fresh();
+    expect(b.visible().preview).toBe(false);
+    expect(b.hasSaved()).toBe(true);
+  });
+
+  it('stores nothing once the layout is the designed one again', () => {
+    const a = fresh();
+    a.setVisible('preview', false);
+    TestBed.tick();
+    a.reset();
+    TestBed.tick();
+    expect(store.data.size).toBe(0);
+    expect(fresh().hasSaved()).toBe(false);
+  });
 });

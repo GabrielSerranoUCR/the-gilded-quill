@@ -217,7 +217,11 @@ export class EditorPage {
       const el = this.workspace()?.nativeElement;
       if (!el) return;
       const measure = () => {
-        this.layout.space.set({ w: el.clientWidth, h: el.clientHeight });
+        const w = el.clientWidth;
+        const h = el.clientHeight;
+        const now = this.layout.space();
+        if (now && now.w === w && now.h === h) return; // a new object every time would re-run everything that reads it
+        this.layout.space.set({ w, h });
         this.layout.refit();
       };
       measure();

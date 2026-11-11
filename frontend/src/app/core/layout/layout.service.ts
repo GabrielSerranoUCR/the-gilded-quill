@@ -1,4 +1,4 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, effect, signal } from '@angular/core';
 import { DEFAULT_LAYOUT, LIMITS, LayoutSizes, PanelId, PanelLayout, Space, Visibility, clampSizes, maxSize, parseLayout } from './panel-layout';
 
 const KEY = 'quill.layout.v1';
@@ -9,8 +9,8 @@ export interface Popped {
 }
 
 /**
- * How this scribe has arranged the editor. Changes apply at once; "Save as my tavern layout" keeps them
- * in this browser for next time, and "Reset" goes back to the designed layout (and forgets the saved one).
+ * How this scribe has arranged the editor. Changes apply at once and are kept in this browser, so a reload brings
+ * the same layout back; "Reset" goes back to the designed layout (and forgets the stored one).
  */
 @Injectable({ providedIn: 'root' })
 export class PanelLayoutService {
@@ -29,6 +29,31 @@ export class PanelLayoutService {
       this.visible.set(saved.visible);
       this.hasSaved.set(true);
     }
+    // every change is kept (a reload must not undo someone's arrangement); the designed layout stores nothing
+    effect(() => {
+      const layout: PanelLayout = { sizes: this.sizes(), visible: this.visible() };
+      if (isDefault(layout)) this.forget();
+      else this.store(layout);
+    });
+  }
+
+  private store(layout: PanelLayout): boolean {
+    try {
+      globalThis.localStorage.setItem(KEY, JSON.stringify(layout));
+      this.hasSaved.set(true);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  private forget(): void {
+    try {
+      globalThis.localStorage?.removeItem(KEY);
+    } catch {
+      /* nothing stored, nothing to forget */
+    }
+    this.hasSaved.set(false);
   }
 
   private read(): PanelLayout | null {
@@ -70,25 +95,18 @@ export class PanelLayoutService {
 
   /** Returns false if the browser would not store it (private window, storage blocked). */
   save(): boolean {
-    try {
-      const layout: PanelLayout = { sizes: this.sizes(), visible: this.visible() };
-      globalThis.localStorage.setItem(KEY, JSON.stringify(layout));
-      this.hasSaved.set(true);
-      return true;
-    } catch {
-      return false;
-    }
+    return this.store({ sizes: this.sizes(), visible: this.visible() });
   }
 
   reset(): void {
     this.sizes.set({ ...DEFAULT_LAYOUT.sizes });
     this.visible.set({ ...DEFAULT_LAYOUT.visible });
-    try {
-      globalThis.localStorage?.removeItem(KEY);
-    } catch {
-      /* nothing stored, nothing to forget */
-    }
-    this.hasSaved.set(false);
+    this.forget();
     this.refit();
   }
+}
+
+function isDefault(l: PanelLayout): boolean {
+  const same = <T extends object>(a: T, b: T) => (Object.keys(b) as (keyof T)[]).every((k) => a[k] === b[k]);
+  return same(l.sizes, DEFAULT_LAYOUT.sizes) && same(l.visible, DEFAULT_LAYOUT.visible);
 }
