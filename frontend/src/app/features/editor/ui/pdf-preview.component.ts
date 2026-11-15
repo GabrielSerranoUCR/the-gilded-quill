@@ -38,7 +38,7 @@ interface Slot { el: HTMLElement; canvas: HTMLCanvasElement; text: HTMLElement |
       <span class="sp"></span>
       @if (pdfUrl()) {
         <button type="button" class="hbtn" title="Zoom out" aria-label="Zoom out" (click)="zoomBy(-0.15)">−</button>
-        <button type="button" class="hbtn zoom" [title]="zoom() === 1 ? 'Fits the panel height' : 'Back to fit the panel height'" aria-label="Fit to height" (click)="setZoom(1)">{{ (zoom() * 100).toFixed(0) }}%</button>
+        <button type="button" class="hbtn zoom" [title]="zoom() === 1 ? 'Fits the panel' : 'Back to fit the panel'" aria-label="Fit to panel" (click)="setZoom(1)">{{ (zoom() * 100).toFixed(0) }}%</button>
         <button type="button" class="hbtn" title="Zoom in" aria-label="Zoom in" (click)="zoomBy(0.15)">+</button>
       }
       @if (controls()) {
@@ -89,6 +89,7 @@ export class PdfPreviewComponent implements OnDestroy {
   private observer: IntersectionObserver | null = null;
   private resizer: ResizeObserver | null = null;
   private height = 0;
+  private width = 0;
   private generation = 0;
   private timer: ReturnType<typeof setTimeout> | undefined;
 
@@ -191,9 +192,9 @@ export class PdfPreviewComponent implements OnDestroy {
     if (this.resizer) return;
     const host = this.scroller().nativeElement;
     this.resizer = new ResizeObserver(() => {
-      if (Math.abs(host.offsetHeight - this.height) < 2) return;
+      if (Math.abs(host.clientHeight - this.height) < 2 && Math.abs(host.clientWidth - this.width) < 2) return;
       clearTimeout(this.timer);
-      // the panel changed size: fit the page to it afresh, back at the default zoom
+      // the panel changed size (either way): fit the page to it afresh, back at the default zoom
       this.timer = setTimeout(() => {
         this.zoom.set(1);
         this.layout();
@@ -202,16 +203,17 @@ export class PdfPreviewComponent implements OnDestroy {
     this.resizer.observe(host);
   }
 
-  /** Size every page for the panel height and zoom; pages that are on screen are drawn again at the new size. */
+  /** Size every page to fit the panel (width and height) and zoom; pages that are on screen are drawn again at the new size. */
   private layout(): void {
     const host = this.scroller().nativeElement;
-    this.height = host.offsetHeight;
-    if (!this.slots.length || this.height <= 0) return;
+    this.height = host.clientHeight;
+    this.width = host.clientWidth;
+    if (!this.slots.length || this.height <= 0 || this.width <= 0) return;
     const top = host.scrollTop;
     const height = host.scrollHeight;
     for (const s of this.slots) {
       const base = s.page.getViewport({ scale: 1 });
-      const next = pageScale(this.height, base.height, this.zoom());
+      const next = pageScale({ width: this.width, height: this.height }, base, this.zoom());
       if (next !== s.scale) {
         s.text?.remove(); // its words would no longer sit on the page
         s.text = null;
