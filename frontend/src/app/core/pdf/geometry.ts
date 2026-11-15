@@ -1,12 +1,14 @@
 /** Pure layout maths for the PDF preview. Lengths are in PDF points unless the name says `px`. */
 
 /**
- * The CSS scale that makes a page `pageHeight` points tall fit `containerPx` (minus `paddingPx` above and below),
- * times the user's zoom: the preview adjusts to the panel's height, not its width.
+ * The CSS scale that makes a whole page fit the panel (minus `paddingPx` on every side), times the user's zoom:
+ * the preview adjusts to whichever of the panel's width or height is the tighter fit, so a wide page (a beamer slide)
+ * is not cut off at the sides and a tall one is not cut off below.
  */
-export function pageScale(containerPx: number, pageHeight: number, zoom: number, paddingPx = 20): number {
-  const fit = Math.max(40, containerPx - 2 * paddingPx) / Math.max(1, pageHeight);
-  return fit * Math.min(4, Math.max(0.25, zoom));
+export function pageScale(panel: { width: number; height: number }, page: { width: number; height: number }, zoom: number, paddingPx = 20): number {
+  const byHeight = Math.max(40, panel.height - 2 * paddingPx) / Math.max(1, page.height);
+  const byWidth = Math.max(40, panel.width - 2 * paddingPx) / Math.max(1, page.width);
+  return Math.min(byHeight, byWidth) * Math.min(4, Math.max(0.25, zoom));
 }
 
 /** Where a click landed on a page: points from its top-left corner (what SyncTeX speaks), or null outside the page. */

@@ -1,11 +1,14 @@
 import { pageScale, pointOnPage, restoredScrollTop } from './geometry';
 
 describe('pdf geometry', () => {
-  it('fits the page to the panel height, then applies the zoom', () => {
-    expect(pageScale(840, 800, 1)).toBeCloseTo(1, 5); // 840 - 2*20 = 800
-    expect(pageScale(840, 800, 2)).toBeCloseTo(2, 5);
-    expect(pageScale(840, 800, 100)).toBeCloseTo(4, 5); // zoom is capped
-    expect(pageScale(840, 800, 1)).toBe(pageScale(1400, 800, 1) * (800 / 1360)); // the width of the panel does not matter
+  it('fits the whole page to the panel, by its tighter side, then applies the zoom', () => {
+    const portrait = { width: 600, height: 800 };
+    expect(pageScale({ width: 2000, height: 840 }, portrait, 1)).toBeCloseTo(1, 5); // height decides: 840 - 2*20 = 800
+    expect(pageScale({ width: 2000, height: 840 }, portrait, 2)).toBeCloseTo(2, 5);
+    expect(pageScale({ width: 2000, height: 840 }, portrait, 100)).toBeCloseTo(4, 5); // zoom is capped
+    const slide = { width: 800, height: 450 }; // a beamer slide in a tall, narrow panel: width decides
+    expect(pageScale({ width: 440, height: 1000 }, slide, 1)).toBeCloseTo(0.5, 5); // (440 - 40) / 800
+    expect(pageScale({ width: 1400, height: 490 }, slide, 1)).toBeCloseTo(1, 5); // height decides again: (490 - 40) / 450
   });
 
   it('turns a click into points from the page corner, and ignores clicks outside it', () => {
